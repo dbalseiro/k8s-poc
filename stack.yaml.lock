@@ -3,11 +3,38 @@
 # For more information, please see the documentation at:
 #   https://docs.haskellstack.org/en/stable/lock_files
 
-packages: []
+packages:
+- completed:
+    hackage: kubernetes-client-0.3.2.0@sha256:bc94e50f06a0525917a44c07177207a3c7cdc4df91e15f68d2e7aae53a216601,4818
+    pantry-tree:
+      size: 2021
+      sha256: e3a49f9197debff57c034a60f9efd28b2de4ce6a060426e5718fb61c7921c458
+  original:
+    hackage: kubernetes-client-0.3.2.0
+- completed:
+    hackage: jsonpath-0.1.0.2@sha256:5777d0fa65d697a0375c51189cdd632280c1ab5fed4c82664dcd888bfdc32ec2,2195
+    pantry-tree:
+      size: 1098
+      sha256: c9c296bd79d5a5f870dc33bc4de203fa8acfcd57aa3f3a79f2d201b038a4937a
+  original:
+    hackage: jsonpath-0.1.0.2
+- completed:
+    hackage: kubernetes-client-core-0.3.1.0@sha256:52e8be31115c8d080fabdbed80db15e2fe002d6fee475aae382bd685444cd872,6014
+    pantry-tree:
+      size: 7208
+      sha256: be2bf698440becfa160a3d668b249ef3f9ef26841929fc05d292010520006f66
+  original:
+    hackage: kubernetes-client-core-0.3.1.0
+- completed:
+    hackage: oidc-client-0.6.0.0@sha256:2079dc5c9dfb5b3e2fa93098254ca16787c01a0cd3634b1d84afe84c9a6c4825,3368
+    pantry-tree:
+      size: 1298
+      sha256: c8dac64944a1e60d14958067e1992732effe723d60353690720c34b4d126af48
+  original:
+    hackage: oidc-client-0.6.0.0
 snapshots:
 - completed:
-    size: 586069
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/14.yaml
-    sha256: 87842ecbaa8ca9cee59a7e6be52369dbed82ed075cb4e0d152614a627e8fd488
-  original:
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/18/14.yaml
+    size: 533252
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/16/27.yaml
+    sha256: c2aaae52beeacf6a5727c1010f50e89d03869abfab6d2c2658ade9da8ed50c73
+  original: lts-16.27

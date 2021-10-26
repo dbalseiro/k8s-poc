@@ -23,17 +23,6 @@ source-repository head
   type: git
   location: https://github.com/githubuser/k8s-poc
 
-library
-  exposed-modules:
-      Lib
-  other-modules:
-      Paths_k8s_poc
-  hs-source-dirs:
-      src
-  build-depends:
-      base >=4.7 && <5
-  default-language: Haskell2010
-
 executable k8s-poc-exe
   main-is: Main.hs
   other-modules:
@@ -43,18 +32,11 @@ executable k8s-poc-exe
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       base >=4.7 && <5
-    , k8s-poc
-  default-language: Haskell2010
-
-test-suite k8s-poc-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_k8s_poc
-  hs-source-dirs:
-      test
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      base >=4.7 && <5
-    , k8s-poc
+    , containers
+    , directory
+    , exceptions
+    , filepath
+    , kubernetes-client
+    , kubernetes-client-core
+    , text
   default-language: Haskell2010
