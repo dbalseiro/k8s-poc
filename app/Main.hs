@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE LambdaCase #-}
 
 module Main where
 
@@ -6,21 +7,26 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import qualified Data.Map as Map
+import qualified Data.Aeson as A
+import qualified Data.Yaml as Y
 
 import Control.Monad.Catch (throwM, Exception, MonadThrow)
+import Control.Monad (mapM_)
 import Control.Arrow (second)
 
 import System.Environment (lookupEnv, getEnv)
 import System.Directory (getHomeDirectory)
 import System.FilePath.Posix ((</>))
 
-import Kubernetes.Client.Config (KubeConfigSource(..), mkKubeClientConfig, setTokenAuth)
+import Kubernetes.Client.Config (KubeConfigSource(..), mkKubeClientConfig, mkInClusterClientConfig, setTokenAuth)
 import Kubernetes.Client.Auth.OIDC (OIDCCache)
 import Kubernetes.OpenAPI.API.CoreV1 (readNamespacedConfigMap)
 import Kubernetes.OpenAPI.MimeTypes (Accept(..), MimeJSON(..))
-import Kubernetes.OpenAPI.Model (Name(..), Namespace(..))
+import Kubernetes.OpenAPI.Model (Name(..), Namespace(..), V1ConfigMap(..))
 import Kubernetes.OpenAPI.Client (MimeResult(..), MimeError, dispatchMime)
 import Kubernetes.OpenAPI.Core
+
+import Network.HTTP.Client (Manager)
 
 import GHC.Conc (newTVarIO)
 
@@ -28,16 +34,37 @@ data K8SFailure = K8SMimeFailure String MimeError
   deriving Show
 instance Exception K8SFailure
 
+data Dependency = Dependency
+  { githubRepo :: String
+  , githubRef  :: Sring
+  } deriving Show
+
+instance A.ToJSON Dependency where
+  parseJSON = A.withObject "Dependency" $ \o -> do
+    githubRepo <- o A..: "github"
+    githubRef  <- o A..: "ref"
+    return Dependency{..}
+
+instance A.ToJSON [Dependency] where
+  parseJSON = A.withObject "[Dependency]" (A..: "apps")
+
 main :: IO ()
 main = do
-  cache <- makeEmptyCache
-  source <- getK8sSource
-  token <- getToken
-  (manager, cfg) <- second (setTokenAuth token) <$> mkKubeClientConfig cache source
-  configMapRequest <- readNamespacedConfigMap (Accept MimeJSON) <$> configMapName <*> getNamespaceFromEnv
+  (manager, cfg) <- getK8SConfiguration
+  configMapRequest <- getConfigMapRequest
   configMap <- assertMimeResult =<< dispatchMime manager cfg configMapRequest
-  print configMap
-  return ()
+  either error (mapM_ print) $ extractDependencies configMap
+  where
+    getConfigMapRequest =
+      readNamespacedConfigMap (Accept MimeJSON) configMapName <$> getNamespaceFromEnv
+
+getK8SConfiguration :: IO (Manager, KubernetesClientConfig)
+getK8SConfiguration = getK8sSource >>= \case
+  KubeConfigCluster -> mkInClusterClientConfig
+  localConfig -> do
+    token <- getToken
+    cache <- makeEmptyCache
+    second (setTokenAuth token) <$> mkKubeClientConfig cache localConfig
 
 assertMimeResult :: MonadThrow m => MimeResult res -> m res
 assertMimeResult (MimeResult (Left err) _) = throwM $ K8SMimeFailure "Mime Error" err
@@ -64,6 +91,14 @@ getNamespaceFromEnv = Namespace . T.pack . fromMaybe "default" <$> lookupEnv "K8
 getToken :: IO Text
 getToken = T.pack <$> getEnv "K8S_TOKEN"
 
-configMapName :: IO Name
-configMapName = return $ Name "juvo-dependencies"
+configMapName :: Name
+configMapName = Name "juvo-dependencies"
+
+extractDependencies :: V1ConfigMap -> Either String [Dependency]
+extractDependencies cfgmap = do
+  yaml <- maybe (Left "Dependencies not found") Right $ do
+    valueMap <- v1ConfigMapData cfgmap
+    Map.lookup "dependencies.yaml" valueMap
+
+  left show . Y.decodeEither . T.encodeUtf8 $ yaml
 

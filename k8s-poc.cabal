@@ -36,6 +36,7 @@ executable k8s-poc-exe
     , directory
     , exceptions
     , filepath
+    , http-client
     , kubernetes-client
     , kubernetes-client-core
     , text

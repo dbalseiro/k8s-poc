@@ -28,6 +28,7 @@ dependencies:
 - filepath
 - text
 - exceptions
+- http-client
 
 executables:
   k8s-poc-exe:
