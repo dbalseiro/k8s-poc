@@ -1,4 +1,5 @@
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE LambdaCase #-}
 
 module Main where
@@ -6,13 +7,14 @@ module Main where
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 import qualified Data.Map as Map
 import qualified Data.Aeson as A
 import qualified Data.Yaml as Y
 
 import Control.Monad.Catch (throwM, Exception, MonadThrow)
 import Control.Monad (mapM_)
-import Control.Arrow (second)
+import Control.Arrow (second, left)
 
 import System.Environment (lookupEnv, getEnv)
 import System.Directory (getHomeDirectory)
@@ -36,27 +38,34 @@ instance Exception K8SFailure
 
 data Dependency = Dependency
   { githubRepo :: String
-  , githubRef  :: Sring
+  , githubRef  :: String
   } deriving Show
 
-instance A.ToJSON Dependency where
+newtype Dependencies = Dependencies { unDependencies :: [Dependency] }
+
+instance A.FromJSON Dependency where
   parseJSON = A.withObject "Dependency" $ \o -> do
     githubRepo <- o A..: "github"
     githubRef  <- o A..: "ref"
     return Dependency{..}
 
-instance A.ToJSON [Dependency] where
-  parseJSON = A.withObject "[Dependency]" (A..: "apps")
+instance A.FromJSON Dependencies where
+  parseJSON = A.withObject "Depenencies" $ fmap Dependencies . (A..: "apps")
+
 
 main :: IO ()
 main = do
   (manager, cfg) <- getK8SConfiguration
   configMapRequest <- getConfigMapRequest
   configMap <- assertMimeResult =<< dispatchMime manager cfg configMapRequest
-  either error (mapM_ print) $ extractDependencies configMap
+
+  either error (mapM_ print . unDependencies) $
+    extractDependencies configMap
+
   where
     getConfigMapRequest =
       readNamespacedConfigMap (Accept MimeJSON) configMapName <$> getNamespaceFromEnv
+
 
 getK8SConfiguration :: IO (Manager, KubernetesClientConfig)
 getK8SConfiguration = getK8sSource >>= \case
@@ -94,11 +103,9 @@ getToken = T.pack <$> getEnv "K8S_TOKEN"
 configMapName :: Name
 configMapName = Name "juvo-dependencies"
 
-extractDependencies :: V1ConfigMap -> Either String [Dependency]
+extractDependencies :: V1ConfigMap -> Either String Dependencies
 extractDependencies cfgmap = do
-  yaml <- maybe (Left "Dependencies not found") Right $ do
-    valueMap <- v1ConfigMapData cfgmap
-    Map.lookup "dependencies.yaml" valueMap
-
-  left show . Y.decodeEither . T.encodeUtf8 $ yaml
+  yaml <- maybe (Left "Dependencies not found") Right $
+    v1ConfigMapData cfgmap >>= Map.lookup "dependencies.yaml"
+  left show . Y.decodeEither' . T.encodeUtf8 $ yaml
 
