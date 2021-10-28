@@ -24,10 +24,13 @@ dependencies:
 - containers
 - kubernetes-client
 - kubernetes-client-core
+- bytestring
+- streaming-bytestring
+- streaming
 - directory
 - filepath
 - text
-- exceptions
+- async
 - http-client
 - aeson
 - yaml
